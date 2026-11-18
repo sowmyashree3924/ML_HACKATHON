@@ -97,6 +97,9 @@ def build_candidate_features(
         if include_labels and ref_arc not in candidate_ids:
             misses += 1
         for arc_id, distance in zip(candidate_ids, distances):
+            vx, vy = bx[arc_id] - ax[arc_id], by[arc_id] - ay[arc_id]
+            denominator = max(vx * vx + vy * vy, 1e-12)
+            segment_fraction = float(np.clip(((px - ax[arc_id]) * vx + (py - ay[arc_id]) * vy) / denominator, 0.0, 1.0))
             rows.append({
                 "trip_id": trip.trip_id, "observation_id": obs_id,
                 "candidate_arc_id": int(arc_id), "distance_m": float(distance),
@@ -105,6 +108,7 @@ def build_candidate_features(
                 "time_gap_seconds": float(dt[obs_id]), "gps_step_m": float(step[obs_id]),
                 "candidate_bearing_deg": float(bearings[arc_id]),
                 "endpoint_distance_m": float(min(np.hypot(px-ax[arc_id], py-ay[arc_id]), np.hypot(px-bx[arc_id], py-by[arc_id]))),
+                "segment_fraction": segment_fraction,
                 "local_density": float(len(candidate_ids)),
                 **({"label": int(int(arc_id) == ref_arc)} if include_labels else {}),
             })

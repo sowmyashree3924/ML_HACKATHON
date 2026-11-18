@@ -6,10 +6,12 @@ const map = document.querySelector('#map');
 const mapEmpty = document.querySelector('#map-empty');
 let currentTrip = null;
 let currentMatches = [];
+let currentRoute = [];
 let modelReady = false;
+let apiBase = (localStorage.getItem('pathsnap_api_base') || '').replace(/\/$/, '');
 
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
+  const response = await fetch(`${apiBase}${url}`, options);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.detail || `Request failed (${response.status})`);
   return payload;
@@ -43,12 +45,20 @@ function projectPoints(points, width = 1000, height = 520) {
 
 function renderMap() {
   if (!currentTrip?.observations?.length) return;
-  const project = projectPoints(currentTrip.observations);
+  const routePoints = currentRoute.flatMap(segment => [
+    {longitude: segment.from_longitude, latitude: segment.from_latitude},
+    {longitude: segment.to_longitude, latitude: segment.to_latitude},
+  ]);
+  const project = projectPoints([...currentTrip.observations, ...routePoints]);
   const points = currentTrip.observations.map(project);
   const path = points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
-  const segments = currentMatches.map(match => {
-    const from = project({longitude: match.matched_from_longitude, latitude: match.matched_from_latitude});
-    const to = project({longitude: match.matched_to_longitude, latitude: match.matched_to_latitude});
+  const routeSegments = currentRoute.length ? currentRoute : currentMatches.map(match => ({
+    from_longitude: match.matched_from_longitude, from_latitude: match.matched_from_latitude,
+    to_longitude: match.matched_to_longitude, to_latitude: match.matched_to_latitude,
+  }));
+  const segments = routeSegments.map(segment => {
+    const from = project({longitude: segment.from_longitude, latitude: segment.from_latitude});
+    const to = project({longitude: segment.to_longitude, latitude: segment.to_latitude});
     return `<line class="matched-segment" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" />`;
   }).join('');
   const dots = points.map((point, index) => {
@@ -78,6 +88,7 @@ function renderTable(matches) {
 async function loadTrip(tripId) {
   currentTrip = await requestJson(`/api/trips/${encodeURIComponent(tripId)}`);
   currentMatches = [];
+  currentRoute = [];
   document.querySelector('#observation-count').textContent = formatNumber(currentTrip.observations.length);
   document.querySelector('#node-count').textContent = formatNumber(currentTrip.node_count);
   document.querySelector('#arc-count').textContent = formatNumber(currentTrip.arc_count);
@@ -97,10 +108,12 @@ async function reconstruct() {
   try {
     const response = await requestJson(`/api/trips/${encodeURIComponent(currentTrip.trip_id)}/match`, {method: 'POST'});
     currentMatches = response.matches;
+    currentRoute = response.route || [];
     document.querySelector('#matched-count').textContent = formatNumber(currentMatches.length);
     renderMap();
     renderTable(currentMatches);
-    setMessage(`Route reconstructed for ${formatNumber(currentMatches.length)} observations.`);
+    document.querySelector('#map-caption').textContent = `${formatNumber(currentRoute.length)} connected road arcs in reconstructed route.`;
+    setMessage(`Route reconstructed across ${formatNumber(currentRoute.length)} road arcs for ${formatNumber(currentMatches.length)} observations.`);
   } catch (error) {
     setMessage(error.message, true);
   } finally {
@@ -132,4 +145,11 @@ async function start() {
 
 tripSelect.addEventListener('change', () => loadTrip(tripSelect.value).catch(error => setMessage(error.message, true)));
 matchButton.addEventListener('click', reconstruct);
+const apiUrlInput = document.querySelector('#api-url');
+apiUrlInput.value = apiBase;
+document.querySelector('#connect-api').addEventListener('click', () => {
+  apiBase = apiUrlInput.value.trim().replace(/\/$/, '');
+  localStorage.setItem('pathsnap_api_base', apiBase);
+  start();
+});
 start();

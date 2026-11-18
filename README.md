@@ -27,21 +27,28 @@ limitation in mind. Route-derived distance is excluded from model features.
 Python 3.10+ is recommended. Install the core packages with
 `python -m pip install -r requirements.txt`. Torch and PyTorch Geometric are
 only needed for the optional GraphSAGE architecture in `src/model.py`; install
-`requirements-advanced.txt` for those optional experiments. The default
-five-model comparison uses scikit-learn.
+`requirements-advanced.txt` for those optional experiments. The default final
+fit uses scikit-learn's Random Forest; `--compare-models` enables the full
+five-model comparison.
 
 ```text
 python main.py eda --raw-root "dataset_raw/Student folder"
 python main.py features --raw-root "dataset_raw/Student folder"
-python main.py train --raw-root "dataset_raw/Student folder" --folds 5
+python main.py train --raw-root "dataset_raw/Student folder" --selected-model random_forest
 python main.py evaluate --raw-root "dataset_raw/Student folder"
 ```
 
+Pass `--training-csv "C:/path/to/PathSnap_fast_training_data.csv"` to train
+directly from the compact candidate table. It normalizes the three available
+features (point-to-segment distance, road length, and heading difference) to
+the same columns used during API inference. The default `train` command fits
+the selected Random Forest after the model comparison. Use `--compare-models`
+to run all five candidates through trip-grouped CV and select by CV macro F1.
+
 `all` runs the EDA inventory, training, and student-test prediction flow.
 Evaluation defaults to `student_test`; evaluator-test data must remain separate
-and must never be used for fitting or model selection. Training uses grouped
-cross-validation by trip to avoid splitting observations from the same trip
-across folds.
+and must never be used for fitting or model selection. Cross-validation groups
+by trip to avoid splitting observations from the same trip across folds.
 
 ## Outputs
 
@@ -56,10 +63,10 @@ across folds.
 
 The submission includes trip/observation IDs, timestamps, raw GPS coordinates,
 matched arc ID, confidence, and coordinates for both endpoints of the selected
-road segment. The sequence decoder uses classifier probabilities and endpoint
-continuity as a compact Viterbi-style smoother. It is not a replacement for a
-full shortest-path HMM and should be validated against route continuity before
-deployment.
+road segment. The Viterbi decoder uses classifier probabilities as emissions
+and directed, distance-weighted shortest paths through the road graph as
+transitions. It also writes each trip's expanded reconstructed arc sequence to
+a separate `*_route.csv` file.
 
 ## Modules
 
@@ -69,15 +76,17 @@ deployment.
 * `src/model.py`: five scikit-learn candidate classifiers and optional PyG
   GraphSAGE scorer.
 * `src/train.py`: grouped cross-validation, development comparison, and model
-  checkpointing.
+  checkpointing. The default CLI fits the selected Random Forest; use
+  `--compare-models` to rerun the five classifiers and select by grouped CV
+  macro F1.
 * `src/evaluate.py`: inference, sequence decoding, and submission construction.
 * `notebooks/01_eda.ipynb`: starter notebook for inventory and visualization.
 
 The optional GraphSAGE module is an architecture scaffold; the default CLI does
-not train it. Results from the default trainer cover the five tabular models
-only. Model selection is based on grouped CV observation-level top-1 accuracy,
-with additional classification, log-loss, coverage, and student-test columns
-recorded for review.
+not train it. A full comparison selects by grouped CV candidate macro F1 and
+records log-loss, observation-level top-1, coverage, and student-test metrics.
+After a comparison, the selected model can be fitted directly without
+repeating CV.
 
 ## API and browser interface
 
@@ -86,13 +95,13 @@ repository root:
 
 ```text
 python -m pip install -r requirements.txt
-python main.py train
+python main.py train --training-csv "C:/path/to/PathSnap_fast_training_data.csv"
 uvicorn backend.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/`. The interface lists `student_test` trips, draws
-the GPS trace, and displays the matched road segments and confidence after you
-select **Reconstruct route**. The API documentation is at
+the GPS trace, and displays the reconstructed connected road path and per-point
+confidence after you select **Reconstruct route**. The API documentation is at
 `http://127.0.0.1:8000/docs`.
 
 The service reads student-test trips from
@@ -101,6 +110,27 @@ The service reads student-test trips from
 or `PATHSNAP_OUTPUT_DIR` to override those locations. Endpoints include
 `GET /api/health`, `GET /api/trips/`, `GET /api/trips/{trip_id}`, and
 `POST /api/trips/{trip_id}/match`.
+
+### Two-laptop setup
+
+Keep the dataset and trained model on Laptop 1. Find its LAN IPv4 address with
+`ipconfig`, then allow the frontend's exact origin and bind the API to the LAN
+interface (replace the sample address with Laptop 2's IPv4 address):
+
+```powershell
+$env:PATHSNAP_CORS_ORIGINS = "http://192.168.1.25:5500"
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+On Laptop 2, serve the `frontend` folder from the project checkout:
+
+```powershell
+python -m http.server 5500 --bind 0.0.0.0 --directory frontend
+```
+
+Open `http://127.0.0.1:5500/`, expand **Connection settings**, enter
+`http://<Laptop-1-IPv4>:8000`, and press **Connect**. Both machines should be
+on the same reachable network. The browser UI stores that API address locally.
 
 Local datasets, trained checkpoints, generated predictions, and virtual
 environments are excluded from Git. Copy the data to the expected local folder

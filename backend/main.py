@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -19,9 +20,11 @@ app = FastAPI(
     description="Student-test trip browser and GPS-to-road route reconstruction API.",
     version="1.0.0",
 )
+cors_setting = os.getenv("PATHSNAP_CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5500,http://127.0.0.1:5500")
+cors_origins = [origin.strip() for origin in cors_setting.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:5173"],
+    allow_origins=cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],

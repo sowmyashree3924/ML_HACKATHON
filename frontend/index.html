@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#f4f5f1" />
     <title>PathSnap · Route reconstruction</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/connection.css" />
   </head>
   <body>
     <header class="topbar">
@@ -22,6 +23,14 @@
       </section>
 
       <section class="controls card" aria-label="Trip controls">
+        <details class="connection-settings">
+          <summary>Connection settings <span>Same laptop by default · configure for two laptops</span></summary>
+          <div class="connection-row">
+            <label for="api-url">Backend API address</label>
+            <input id="api-url" type="url" placeholder="Same laptop, or http://192.168.1.10:8000" />
+            <button id="connect-api" class="secondary-button">Connect</button>
+          </div>
+        </details>
         <div class="field-group">
           <label for="trip-select">Student-test trip</label>
           <select id="trip-select" disabled><option>Loading trips…</option></select>

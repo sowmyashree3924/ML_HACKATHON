@@ -36,13 +36,28 @@ def load_model() -> dict[str, Any]:
     return _artifact
 
 
-def match_trip(trip_id: str) -> list[dict[str, Any]]:
-    """Run candidate scoring and sequence decoding for one student-test trip."""
+def match_trip(trip_id: str) -> dict[str, Any]:
+    """Run candidate scoring and return point matches plus full route geometry."""
     trip = get_trip(trip_id)
     artifact = load_model()
     result = predict_trip(trip.folder, artifact, OUTPUT_DIR)
     records = result.to_dict(orient="records")
-    return [
+    matches = [
         {key: value.item() if isinstance(value, np.generic) else value for key, value in row.items()}
         for row in records
     ]
+    route_arc_ids = result.attrs.get("route_arc_ids", [])
+    endpoints = trip.arcs[["from_node_id", "to_node_id"]].to_numpy(dtype=int)
+    coordinates = trip.nodes[["longitude", "latitude"]].to_numpy()
+    route = [
+        {
+            "sequence_index": index,
+            "arc_id": int(arc_id),
+            "from_longitude": float(coordinates[endpoints[arc_id, 0], 0]),
+            "from_latitude": float(coordinates[endpoints[arc_id, 0], 1]),
+            "to_longitude": float(coordinates[endpoints[arc_id, 1], 0]),
+            "to_latitude": float(coordinates[endpoints[arc_id, 1], 1]),
+        }
+        for index, arc_id in enumerate(route_arc_ids)
+    ]
+    return {"matches": matches, "route": route}

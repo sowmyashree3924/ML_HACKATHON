@@ -45,10 +45,16 @@ def trip_details(trip_id: str) -> dict[str, object]:
 def predict_trip_route(trip_id: str) -> dict[str, object]:
     """Return predicted matched road segments for a trip."""
     try:
-        matches = match_trip(trip_id)
+        result = match_trip(trip_id)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     except FileNotFoundError as error:
         code = 503 if "checkpoint" in str(error).lower() else 404
         raise HTTPException(status_code=code, detail=str(error)) from error
-    return {"trip_id": trip_id, "matched_observations": len(matches), "matches": matches}
+    return {
+        "trip_id": trip_id,
+        "matched_observations": len(result["matches"]),
+        "route_arc_count": len(result["route"]),
+        "matches": result["matches"],
+        "route": result["route"],
+    }

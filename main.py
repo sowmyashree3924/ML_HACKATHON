@@ -40,6 +40,9 @@ def main() -> None:
     parser.add_argument("--experiments-dir", default="experiments")
     parser.add_argument("--model-path", default="models/pathsnap_model.joblib")
     parser.add_argument("--folds", type=int, default=5)
+    parser.add_argument("--training-csv", help="Optional compact labeled candidate CSV")
+    parser.add_argument("--selected-model", choices=["logistic_regression", "random_forest", "extra_trees", "hist_gradient_boosting", "gradient_boosting"], default="random_forest", help="Fit this model after your comparison; defaults to the user-selected Random Forest")
+    parser.add_argument("--compare-models", action="store_true", help="Run the full five-model grouped cross-validation comparison")
     args = parser.parse_args()
     raw_root = Path(args.raw_root)
     if args.command == "eda":
@@ -52,7 +55,11 @@ def main() -> None:
             rows.to_csv(processed / f"{split}_candidates.csv", index=False)
             inventory.to_csv(processed / f"{split}_inventory.csv", index=False)
     elif args.command == "train":
-        result = train_pipeline(raw_root, args.processed_dir, args.model_dir, args.experiments_dir, args.folds)
+        result = train_pipeline(
+            raw_root, args.processed_dir, args.model_dir, args.experiments_dir, args.folds,
+            training_csv=args.training_csv,
+            selected_model=None if args.compare_models else args.selected_model,
+        )
         print(f"Selected {result['selected_model']}; checkpoint: {result['model_path']}")
     elif args.command == "evaluate":
         split_dir = raw_root / "student_test"
@@ -60,7 +67,11 @@ def main() -> None:
         print(f"Wrote {len(result)} matched observations to {Path(args.output_dir) / 'submission.csv'}")
     else:
         _write_eda(raw_root, Path(args.output_dir))
-        train_pipeline(raw_root, args.processed_dir, args.model_dir, args.experiments_dir, args.folds)
+        train_pipeline(
+            raw_root, args.processed_dir, args.model_dir, args.experiments_dir, args.folds,
+            training_csv=args.training_csv,
+            selected_model=None if args.compare_models else args.selected_model,
+        )
         result = evaluate_split(raw_root / "student_test", args.model_path, args.output_dir)
         print(f"Wrote {len(result)} development predictions to {Path(args.output_dir) / 'submission.csv'}")
 

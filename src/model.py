@@ -21,7 +21,7 @@ def build_models(random_state: int = 42) -> dict[str, Pipeline]:
         ]),
         "random_forest": Pipeline([
             ("imputer", SimpleImputer(strategy="median")),
-            ("classifier", RandomForestClassifier(n_estimators=180, min_samples_leaf=2, class_weight="balanced_subsample", n_jobs=-1, random_state=random_state)),
+            ("classifier", RandomForestClassifier(n_estimators=100, max_depth=14, max_samples=0.6, min_samples_leaf=3, class_weight="balanced_subsample", n_jobs=-1, random_state=random_state)),
         ]),
         "extra_trees": Pipeline([
             ("imputer", SimpleImputer(strategy="median")),
