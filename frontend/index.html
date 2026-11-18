@@ -7,6 +7,7 @@
     <title>PathSnap · Route reconstruction</title>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/connection.css" />
+    <link rel="stylesheet" href="/evaluation.css" />
   </head>
   <body>
     <header class="topbar">
@@ -65,6 +66,29 @@
           <table>
             <thead><tr><th>Point</th><th>Time</th><th>Matched arc</th><th>Confidence</th><th>GPS position</th></tr></thead>
             <tbody id="results-body"><tr><td colspan="5" class="empty-row">Run route reconstruction to see model output.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="evaluation-card card">
+        <div class="section-heading">
+          <div><p class="eyebrow">DEVELOPMENT EVALUATION</p><h2>Student-test metrics</h2></div>
+          <span id="evaluation-note" class="result-count">Run reconstruction to calculate</span>
+        </div>
+        <p id="evaluation-label" class="evaluation-label">Metrics compare candidate predictions with route-derived weak reference labels. The reference route is not supplied to model inference.</p>
+        <div class="evaluation-grid">
+          <article class="metric-card"><span>Candidate macro-F1</span><strong id="metric-f1">—</strong></article>
+          <article class="metric-card"><span>Observation top-1</span><strong id="metric-top1">—</strong></article>
+          <article class="metric-card"><span>Log loss</span><strong id="metric-logloss">—</strong></article>
+          <article class="metric-card"><span>Candidate miss rate</span><strong id="metric-miss">—</strong></article>
+        </div>
+        <div class="confusion-wrap">
+          <div><h3>Candidate confusion matrix</h3><p>Rows are actual labels; columns are predicted labels at a 0.5 probability threshold.</p></div>
+          <table class="confusion-table" aria-label="Candidate confusion matrix">
+            <thead><tr><th>Actual \ Predicted</th><th>Negative</th><th>Positive</th></tr></thead>
+            <tbody>
+              <tr><th>Negative</th><td id="cm-tn">—</td><td id="cm-fp">—</td></tr>
+              <tr><th>Positive</th><td id="cm-fn">—</td><td id="cm-tp">—</td></tr>
+            </tbody>
           </table>
         </div>
       </section>

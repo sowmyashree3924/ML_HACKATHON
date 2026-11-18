@@ -57,4 +57,5 @@ def predict_trip_route(trip_id: str) -> dict[str, object]:
         "route_arc_count": len(result["route"]),
         "matches": result["matches"],
         "route": result["route"],
+        "metrics": result["metrics"],
     }

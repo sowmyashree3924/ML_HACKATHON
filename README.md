@@ -101,7 +101,11 @@ uvicorn backend.main:app --reload
 
 Open `http://127.0.0.1:8000/`. The interface lists `student_test` trips, draws
 the GPS trace, and displays the reconstructed connected road path and per-point
-confidence after you select **Reconstruct route**. The API documentation is at
+confidence after you select **Reconstruct route**. It also shows per-trip
+candidate macro-F1, observation top-1 accuracy, log loss, candidate miss rate,
+and a 0.5-threshold confusion matrix. These development metrics are calculated
+after inference against the student-test route-derived weak labels; the route
+is not passed into model prediction. The API documentation is at
 `http://127.0.0.1:8000/docs`.
 
 The service reads student-test trips from

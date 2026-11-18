@@ -10,6 +10,7 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.metrics import confusion_matrix, f1_score, log_loss
 
 from .features import FEATURE_COLUMNS, build_candidate_features, local_xy
 from .parser import TripData, discover_trips, parse_trip
@@ -189,6 +190,46 @@ def predict_trip(trip_dir: str | Path, artifact: dict[str, Any], output_dir: str
     )
     result.attrs["route_arc_ids"] = route_arc_ids
     return result
+
+
+def evaluate_candidate_frame(candidates: pd.DataFrame, artifact: dict[str, Any]) -> dict[str, Any]:
+    """Calculate candidate classification and observation-level metrics.
+
+    Candidate labels come from the student-test reference route and are used
+    only after inference for development evaluation.
+    """
+    if candidates.empty or "label" not in candidates:
+        return {"available": False, "message": "No reference-labeled candidates are available."}
+    feature_columns = artifact.get("feature_columns", FEATURE_COLUMNS)
+    features = candidates.reindex(columns=feature_columns)
+    estimator = artifact["model"]
+    probabilities_by_class = estimator.predict_proba(features)
+    classifier_classes = list(estimator.named_steps["classifier"].classes_)
+    positive_index = classifier_classes.index(1) if 1 in classifier_classes else 0
+    probabilities = probabilities_by_class[:, positive_index]
+    labels = candidates.label.to_numpy(dtype=int)
+    predictions = probabilities >= 0.5
+    matrix = confusion_matrix(labels, predictions, labels=[0, 1])
+    scored = candidates[["trip_id", "observation_id", "label"]].copy()
+    scored["probability"] = probabilities
+    winners = scored.loc[scored.groupby(["trip_id", "observation_id"]).probability.idxmax()]
+    miss_rate = float(candidates.groupby(["trip_id", "observation_id"]).label.sum().eq(0).mean())
+    return {
+        "available": True,
+        "label_basis": "Student-test reference route; weak spatial labels",
+        "candidate_rows": int(len(candidates)),
+        "eligible_observations": int(candidates.observation_id.nunique()),
+        "macro_f1": float(f1_score(labels, predictions, average="macro", zero_division=0)),
+        "top1_accuracy": float(winners.label.mean()) if len(winners) else 0.0,
+        "log_loss": float(log_loss(labels, np.clip(probabilities, 1e-7, 1 - 1e-7), labels=[0, 1])),
+        "candidate_miss_rate": miss_rate,
+        "confusion_matrix": {
+            "true_negative": int(matrix[0, 0]),
+            "false_positive": int(matrix[0, 1]),
+            "false_negative": int(matrix[1, 0]),
+            "true_positive": int(matrix[1, 1]),
+        },
+    }
 
 
 def evaluate_split(split_dir: str | Path, model_path: str | Path, output_dir: str | Path) -> pd.DataFrame:

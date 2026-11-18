@@ -85,6 +85,27 @@ function renderTable(matches) {
     : `${formatNumber(matches.length)} points`;
 }
 
+function renderEvaluation(metrics) {
+  const value = metrics || {available: false};
+  const metricIds = ['metric-f1', 'metric-top1', 'metric-logloss', 'metric-miss', 'cm-tn', 'cm-fp', 'cm-fn', 'cm-tp'];
+  if (!value.available) {
+    metricIds.forEach(id => { document.getElementById(id).textContent = '—'; });
+    document.querySelector('#evaluation-note').textContent = value.message || 'Reference route unavailable';
+    document.querySelector('#evaluation-label').textContent = 'Metrics use student-test reference routes only for development evaluation; they are not passed to model inference.';
+    return;
+  }
+  document.querySelector('#metric-f1').textContent = Number(value.macro_f1).toFixed(3);
+  document.querySelector('#metric-top1').textContent = `${(Number(value.top1_accuracy) * 100).toFixed(1)}%`;
+  document.querySelector('#metric-logloss').textContent = Number(value.log_loss).toFixed(3);
+  document.querySelector('#metric-miss').textContent = `${(Number(value.candidate_miss_rate) * 100).toFixed(2)}%`;
+  document.querySelector('#cm-tn').textContent = formatNumber(value.confusion_matrix.true_negative);
+  document.querySelector('#cm-fp').textContent = formatNumber(value.confusion_matrix.false_positive);
+  document.querySelector('#cm-fn').textContent = formatNumber(value.confusion_matrix.false_negative);
+  document.querySelector('#cm-tp').textContent = formatNumber(value.confusion_matrix.true_positive);
+  document.querySelector('#evaluation-note').textContent = `${formatNumber(value.eligible_observations)} observations · ${formatNumber(value.candidate_rows)} candidates`;
+  document.querySelector('#evaluation-label').textContent = `${value.label_basis}. Report these as development metrics, not independently verified ground-truth performance.`;
+}
+
 async function loadTrip(tripId) {
   currentTrip = await requestJson(`/api/trips/${encodeURIComponent(tripId)}`);
   currentMatches = [];
@@ -96,6 +117,7 @@ async function loadTrip(tripId) {
   document.querySelector('#map-title').textContent = `Trip ${currentTrip.trip_id}`;
   document.querySelector('#results-count').textContent = 'No predictions yet';
   document.querySelector('#results-body').innerHTML = '<tr><td colspan="5" class="empty-row">Run route reconstruction to see model output.</td></tr>';
+  renderEvaluation({available: false, message: 'Run reconstruction to calculate'});
   renderMap();
   setMessage(`Loaded ${formatNumber(currentTrip.observations.length)} GPS observations. Run reconstruction to match them to roads.`);
   matchButton.disabled = !modelReady;
@@ -112,6 +134,7 @@ async function reconstruct() {
     document.querySelector('#matched-count').textContent = formatNumber(currentMatches.length);
     renderMap();
     renderTable(currentMatches);
+    renderEvaluation(response.metrics);
     document.querySelector('#map-caption').textContent = `${formatNumber(currentRoute.length)} connected road arcs in reconstructed route.`;
     setMessage(`Route reconstructed across ${formatNumber(currentRoute.length)} road arcs for ${formatNumber(currentMatches.length)} observations.`);
   } catch (error) {
