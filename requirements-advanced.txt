@@ -1,0 +1,4 @@
+# Optional packages for experiments beyond the default tabular pipeline.
+lightgbm>=4.0
+torch>=2.1
+torch-geometric>=2.4

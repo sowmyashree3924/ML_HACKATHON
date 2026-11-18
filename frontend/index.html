@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5f1" />
+    <title>PathSnap · Route reconstruction</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="PathSnap home"><span class="brand-mark">P</span><span>PathSnap</span></a>
+      <span class="topbar-note">GPS route reconstruction</span>
+      <span id="api-status" class="status-pill" role="status"><i></i> Connecting</span>
+    </header>
+
+    <main class="layout">
+      <section class="intro">
+        <p class="eyebrow">MAP MATCHING WORKSPACE</p>
+        <h1>Snap a trip to its road network.</h1>
+        <p class="lede">Choose a student-test trip to compare noisy GPS observations with the model’s connected road-segment match.</p>
+      </section>
+
+      <section class="controls card" aria-label="Trip controls">
+        <div class="field-group">
+          <label for="trip-select">Student-test trip</label>
+          <select id="trip-select" disabled><option>Loading trips…</option></select>
+        </div>
+        <button id="match-button" class="primary-button" disabled><span aria-hidden="true">↗</span> Reconstruct route</button>
+        <p id="message" class="message" role="status">Connecting to the PathSnap API…</p>
+      </section>
+
+      <section class="stats-grid" aria-label="Trip summary">
+        <article class="stat-card"><span>GPS observations</span><strong id="observation-count">—</strong></article>
+        <article class="stat-card"><span>Road nodes</span><strong id="node-count">—</strong></article>
+        <article class="stat-card"><span>Road segments</span><strong id="arc-count">—</strong></article>
+        <article class="stat-card accent"><span>Matched points</span><strong id="matched-count">—</strong></article>
+      </section>
+
+      <section class="map-card card">
+        <div class="section-heading">
+          <div><p class="eyebrow">TRAJECTORY VIEW</p><h2 id="map-title">Select a trip</h2></div>
+          <div class="legend"><span><i class="gps-dot"></i> GPS trace</span><span><i class="road-line"></i> Matched segments</span></div>
+        </div>
+        <div id="map-empty" class="empty-state"><span class="empty-icon">⌖</span><p>Choose a trip to load its GPS trace.</p></div>
+        <svg id="map" class="map" viewBox="0 0 1000 520" role="img" aria-label="GPS observations and matched road segments" hidden></svg>
+        <div class="map-footer"><span id="map-caption">Map view is scaled to the trip extent.</span><span>Local coordinates · not a navigation map</span></div>
+      </section>
+
+      <section class="results-card card">
+        <div class="section-heading">
+          <div><p class="eyebrow">MODEL OUTPUT</p><h2>Matched observations</h2></div>
+          <span id="results-count" class="result-count">No predictions yet</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Point</th><th>Time</th><th>Matched arc</th><th>Confidence</th><th>GPS position</th></tr></thead>
+            <tbody id="results-body"><tr><td colspan="5" class="empty-row">Run route reconstruction to see model output.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <footer>PathSnap · Student-test data is used for development evaluation.</footer>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

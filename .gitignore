@@ -1,0 +1,22 @@
+# Python environments and local machine state
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+backend/venv/
+.env
+.env.*
+!.env.example
+
+# Local datasets and generated/large artifacts
+dataset_raw/
+data/processed/
+experiments/*.csv
+models/
+submissions/
+backend/artifacts/
+
+# Notebook checkpoints and editor files
+.ipynb_checkpoints/
+.vscode/
+.idea/
